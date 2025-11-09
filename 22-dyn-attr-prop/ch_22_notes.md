@@ -1,0 +1,5 @@
+- Dynamic attributes
+- Added FrozenJSON class
+- __getattr__ is a special method that is called when an attribute is not found
+- @classmethod: 
+- isinstance(obj, abc.Mapping): checks if obj is a mapping (e.g. dict)
