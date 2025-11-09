@@ -73,6 +73,114 @@ counter()  # Returns 2
 counter()  # Returns 3
 ```
 
+## Decorators and `__call__`
+
+Decorators are a powerful Python feature that allow you to modify or enhance functions and classes. When creating **class-based decorators**, you need to implement `__call__` to make the decorator instance callable.
+
+### How Decorators Work
+
+When you use a decorator with the `@` syntax:
+
+```python
+@my_decorator
+def my_function():
+    pass
+```
+
+Python essentially does this:
+
+```python
+def my_function():
+    pass
+my_function = my_decorator(my_function)
+```
+
+The decorator is called with the function as an argument, and the result replaces the original function. For this to work, the decorator must be callable.
+
+### Function-Based Decorators
+
+Function-based decorators don't need `__call__` because functions are already callable:
+
+```python
+def timer(func):
+    def wrapper(*args, **kwargs):
+        import time
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        print(f"{func.__name__} took {end - start:.2f} seconds")
+        return result
+    return wrapper
+
+@timer
+def slow_function():
+    import time
+    time.sleep(1)
+```
+
+### Class-Based Decorators Need `__call__`
+
+Class-based decorators need `__call__` because the decorator instance must be callable to wrap the original function:
+
+```python
+class Timer:
+    def __init__(self, func):
+        self.func = func
+    
+    def __call__(self, *args, **kwargs):  # Required for decorator to work!
+        import time
+        start = time.time()
+        result = self.func(*args, **kwargs)
+        end = time.time()
+        print(f"{self.func.__name__} took {end - start:.2f} seconds")
+        return result
+
+@Timer
+def slow_function():
+    import time
+    time.sleep(1)
+```
+
+When Python encounters `@Timer`, it:
+1. Creates an instance: `timer_instance = Timer(slow_function)`
+2. Replaces the function: `slow_function = timer_instance`
+3. When `slow_function()` is called, Python invokes `timer_instance.__call__()`
+
+Without `__call__`, the decorator instance wouldn't be callable, and calling `slow_function()` would raise a `TypeError`.
+
+### Parameterized Class-Based Decorators
+
+For decorators that accept parameters, you need both `__init__` and `__call__`:
+
+```python
+class Retry:
+    def __init__(self, max_attempts=3):
+        self.max_attempts = max_attempts
+    
+    def __call__(self, func):  # Called when decorator is applied
+        def wrapper(*args, **kwargs):
+            for attempt in range(self.max_attempts):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if attempt == self.max_attempts - 1:
+                        raise
+                    print(f"Attempt {attempt + 1} failed: {e}")
+        return wrapper
+
+@Retry(max_attempts=5)
+def unreliable_function():
+    import random
+    if random.random() < 0.7:
+        raise ValueError("Random failure")
+    return "Success!"
+```
+
+In this case:
+- `__init__` is called when `@Retry(max_attempts=5)` is evaluated
+- `__call__` is called with the function to decorate
+- The wrapper function returned by `__call__` replaces the original function
+
 ## Key Points
 
 - **Callables** are objects that can be invoked with `()`
